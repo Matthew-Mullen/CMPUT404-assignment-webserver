@@ -1,6 +1,10 @@
 #  coding: utf-8 
 import socketserver
-
+import os
+import sys
+from mimetypes import guess_type
+from pathlib import Path
+# https://stackoverflow.com/questions/3430372/how-do-i-get-the-full-path-of-the-current-files-directory
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,8 +35,57 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        try:
+            decodedData=self.data.decode("utf-8")
+            linesOfRequest=decodedData.split("\r\n")
+            firstLineOfReq=linesOfRequest[0].split()
+            requestType=firstLineOfReq[0]
+            requestFile=firstLineOfReq[1]
+            if requestType != "GET":
+                self.request.sendall("HTTP/1.1 405 Not Allowed\r\n\r\n".encode())
+                self.request.sendall("405 Not Allowed".encode())
+                return
+            if requestFile[:3] == '/..':
+                self.request.sendall("HTTP/1.1 404 Not Found\r\n\r\n".encode())
+                self.request.sendall("404 Not Found".encode())
+                return
+            if requestFile[-1] == '/':
+                requestFile += "index.html"
+            #print(requestFile)
+            pth=os.path.abspath("www"+requestFile)
+            #print(pth)
+            if not os.path.isfile(pth) and not os.path.isdir(pth):
+                self.request.sendall("HTTP/1.1 404 Not Found\r\n\r\n".encode())
+                self.request.sendall("404 Not Found".encode())
+                return
+            if os.path.isdir(pth):
+                self.request.sendall("HTTP/1.1 301 Permanently Moved\r\n\r\n".encode())
+                loc="Location: "+"http://127.0.0.1/www"+requestFile+'/'
+                self.request.sendall(loc.encode())
+                return
+            file=open("www"+requestFile,'r')
+            responseTxt=""
+            for line in file:
+                responseTxt += line
+            self.request.sendall("HTTP/1.1 200 OK\r\n".encode())
+            fileType,encoding=guess_type(requestFile)
+            contentTypeString="Content-Type: "+str(fileType)+"; charset=UTF-8\r\n"
+            contentLengthString="Content-Length: "+str(len(responseTxt))+'\r\n'
+            connectionCloseString='Connection: close' + "\r\n\r\n"
+            responseTxtString=responseTxt+"\r\n"
+            self.request.sendall(contentTypeString.encode())
+            self.request.sendall(contentLengthString.encode())
+            self.request.sendall(connectionCloseString.encode())
+            self.request.sendall(responseTxtString.encode())
+            file.close()
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            self.request.sendall("HTTP/1.1 404 Not Found \r\n\r\n".encode())
+            self.request.sendall("404 Not Found".encode())
+        finally:
+            self.request.close()
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080

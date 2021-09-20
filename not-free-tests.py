@@ -91,7 +91,7 @@ class TestYourWebserver(unittest.TestCase):
             else:
                 self.assertTrue(False, "The URL hasn't changed %s %s" % (code,req.geturl()))
         except request.HTTPError as e:
-            code = e.getcode() 
+            code = e.getcode()
             self.assertTrue( code >= 300 and code < 400, "300ish Not FOUND! %s" % code)
 
     def test_html(self):

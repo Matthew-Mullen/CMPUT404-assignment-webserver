@@ -29,18 +29,21 @@ class TestYourWebserver(unittest.TestCase):
         url = self.baseurl + "/base.css"
         req = request.urlopen(url, None, 3)
         self.assertTrue( req.getcode()  == 200 , "200 OK Not FOUND!")
+        print(req.info().get_content_type())
+        print(req.info())
         self.assertTrue( req.info().get_content_type() == "text/css", ("Bad mimetype for css! %s" % req.info().get_content_type()))
-
+        print("Passed")
     def test_get_root(self):
         url = self.baseurl + "/"
         req = request.urlopen(url, None, 3)
         self.assertTrue( req.getcode()  == 200 , "200 OK Not FOUND!")
+        print("Passed")
 
     def test_get_indexhtml(self):
         url = self.baseurl + "/index.html"
         req = request.urlopen(url, None, 3)
         self.assertTrue( req.getcode()  == 200 , "200 OK Not FOUND!")
-
+        print("Passed")
 
     def test_get_404(self):
         url = self.baseurl + "/do-not-implement-this-page-it-is-not-found"
@@ -51,7 +54,7 @@ class TestYourWebserver(unittest.TestCase):
             self.assertTrue( e.getcode()  == 404 , ("404 Not FOUND! %d" % e.getcode()))
         else:
             self.assertTrue( False, "Another Error was thrown!")
-
+        print("Passed")
 
 if __name__ == '__main__':
     unittest.main()
